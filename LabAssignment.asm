@@ -18,7 +18,9 @@
 ;	Технология, используемая при реализации: SSE
 
 .DATA
-ModuleMask	QWORD	0000008D0000008Dh, 0000008D0000008Dh
+ModuleMask	QWORD	0000008D0000008Dh
+HighBitMask QWORD	8000000080000000h
+ShiftMask	QWORD	0FFFFFFFEFFFFFFFFh
 ; будет удобней и, возможно, быстрее выписать x^(a - N + 1) в таблицу. 
 ReverseX	DWORD	0F7253097h, 0F7253097h, 0F7253097h, 0F7253097h		; x^-29
 			DWORD	0EE4A61A3h, 0EE4A61A3h, 0EE4A61A3h, 0EE4A61A3h		; x^-28
@@ -82,58 +84,134 @@ ReverseXAB	DWORD	0C5A67F60h, 0C5A67F60h, 0C5A67F60h, 0C5A67F60h		; 1 / (1 - x^-2
 			DWORD	0FFFFFF85h, 0FFFFFF85h, 0FFFFFF85h, 0FFFFFF85h		; 1 / (1 - x^-1)
 .CODE
 
-MulX_32 PROC	; для работы процедуры нужно подготовить регистры xmm2, xmm3 - 32 байтное множимое
-				; портит xmm4, xmm5, xmm6, r9
+MulX_32 PROC	; для работы процедуры нужно подготовить регистры r12, r13, r14, r15 - 32 байтное множимое
+				; портит rax, r8, r9, r10, r11
 
-	pxor	xmm4, xmm4								; обнуление xmm4
-	pxor	xmm5, xmm5								; xmm5
-	pxor	xmm6, xmm6								; xmm6
-	mov		r9, offset ModuleMask					; r9 <- адрес модуля (1 0000 008D без старшего бита (4 раза))
-	movdqa	xmm4, [r9]								; xmm4 <- модуль
+									; обнуление регистров
+	xor		r8,		r8
+	xor		r9,		r9
+	xor		r10,	r10
+	xor		r11,	r11
 
-	pcmpgtd	xmm5, xmm2								; Выделить элементы, у которых старший бит=1
-	pcmpgtd	xmm6, xmm3								
+	mov		rax,	ModuleMask		; rax <- модуль (1 0000 008D без старшего бита (2 раза))
 
-	pand	xmm5, xmm4								;  и подготовить только для них модуль 0000008D
-	pand	xmm6, xmm4								
+									; следующие команды эмулируют команду pcmpgtd (ведь она доступна только на SSE, MMX) 
+									;	т.е. выделяют двойные слова, у которых старший бит=1
+									;	они сгруппированы специально для конвейера
+									;pcmpgtd		r8,		r12
+									;pcmpgtd		r9,		r13
+									;pcmpgtd		r10,	r14
+									;pcmpgtd		r11,	r15
+	mov		r8,		HighBitMask		; маска, выделяющая старшие биты двойных слов 
+	mov		r9,		HighBitMask		
+	mov		r10,	HighBitMask		
+	mov		r11,	HighBitMask		
+	and		r8,		r12				; применение маски
+	and		r9,		r13
+	and		r10,	r14
+	and		r11,	r15
+	sar		r8,		31				; арифметический сдвиг вправо на 31 бит (чтобы знаковый бит размножился на все слово)
+	sar		r9,		31
+	sar		r10,	31
+	sar		r11,	31
+	ror		r8,		1				; циклический сдвиг вправо (чтоб перенести бит первого двойного слова на место знакового)
+	ror		r9,		1
+	ror		r10,	1
+	ror		r11,	1
+	sar		r8,		31				; снова арифметический сдвиг вправо на 31 бит
+	sar		r9,		31
+	sar		r10,	31
+	sar		r11,	31
+	ror		r8,		32				; циклический сдвиг на 32 бита (чтобы все биты встали на свое место)
+	ror		r9,		32
+	ror		r10,	32
+	ror		r11,	32
 
-	pslld	xmm2, 1									; Сдвиг операнда на разряд влево
-	pslld	xmm3, 1									
+	and		r8,		rax				; подготовить только для них модуль 0000008D
+	and		r9,		rax
+	and		r10,	rax
+	and		r11,	rax
+									; следующие команды эмулируют команду pslld 
+									;	т.е. сдвигают двойные слова влево
+									;pslld	r12,	1
+									;pslld	r13,	1
+									;pslld	r14,	1
+									;pslld	r15,	1
+	shl		r12,	1				; сдвиг влево на 1 бит
+	shl		r13,	1
+	shl		r14,	1
+	shl		r15,	1
+	mov		rax,	ShiftMask		; rax <- маска, обнуляющая 32 бит, сдвинувшийся от второго двойного слова
+	and		r12,	rax				; применение маски
+	and		r13,	rax
+	and		r14,	rax
+	and		r15,	rax				
+	
+	xor		r12,	r8						; Прибавление модуля к выделенным элементам
+	xor		r13,	r9		
+	xor		r14,	r10	
+	xor		r15,	r11	
 
-	pxor	xmm2, xmm5								; Прибавление модуля к выделенным элементам
-	pxor	xmm3, xmm6								
 	ret												
 
 MulX_32 ENDP
 
 ; умножение в столбик по модулю
-Mul_32 PROC						; xmm0, xmm1 -- множимый многочлен
-								; xmm7 -- константа из таблицы
-								; результат на xmm2, xmm3
-								; портит xmm2, xmm3, xmm4, xmm5, xmm6, xmm8, xmm9, r9, r10, 
+Mul_32 PROC						; r8, r9, r10, r11 -- множимый многочлен
+								; rax -- константа из таблицы
+								; результат на r12, r13, r14, r15
+								; портит rsi, rdi, rbx, rcx, rdx
 
-	pxor	xmm2,	xmm2		; обнуляю сумму
-	pxor	xmm3,	xmm3
-	mov		r10,	32			; r10 <- счетчик цикла (32 бита = 32 итерации)
+								; обнуляем сумму
+	xor		r12,	r12
+	xor		r13,	r13
+	xor		r14,	r14
+	xor		r15,	r15
+	
+	mov		rsi,	32			; rsi <- счетчик цикла (32 бита = 32 итерации)
 l1:
+	push	r8
+	push	r9
+	push	r10
+	push	r11
+	push	rax
 	call	MulX_32				; умножаю сумму на x
+	pop		rax
+	pop		r11
+	pop		r10
+	pop		r9
+	pop		r8
+									; эмулируем команду pcmpgtd, т.е. выделяем двойные слова, у которых старший бит=1ы
+	mov		rbx,	HighBitMask		; маска, выделяющая старшие биты двойных слов 
+	and		rbx,	rax				; применение маски
+	sar		rbx,	31				; арифметический сдвиг вправо на 31 бит (чтобы знаковый бит размножился на все слово)
+	ror		rbx,	1				; циклический сдвиг вправо (чтоб перенести бит первого двойного слова на место знакового)
+	sar		rbx,	31				; снова арифметический сдвиг вправо на 31 бит
+	ror		rbx,	32				; циклический сдвиг на 32 бита (чтобы все биты встали на свое место)
 
-	pxor	xmm8,	xmm8		; обнуляю xmm8
-	pcmpgtd xmm8,	xmm7		; выделить элементы, у которых старший бит=1
-	movdqa	xmm9,	xmm8		; скопировать на xmm9
+									; копируем на 3 других регистра
+	mov		rcx,	rbx
+	mov		rdx,	rbx
+	mov		rdi,	rbx
+									; применяем полученную маску
+	and		rbx,	r8
+	and		rcx,	r9
+	and		rdx,	r10
+	and		rdi,	r11
+									; прибавляем к сумме результат
+	xor		r12,	rbx
+	xor		r13,	rcx
+	xor		r14,	rdx
+	xor		r15,	rdi
 
-	pand	xmm8,	xmm0		; применить полученную маску на первый множитель
-	pand	xmm9,	xmm1
+								; эмулируем команду pslld, т.е. сдвигаем двойные слова влево
+	shl		rax,	1			; сдвиг влево на 1 бит
+	and		rax,	ShiftMask	; применение маски
 
-	pxor	xmm2,	xmm8		; прибавить к сумме результат
-	pxor	xmm3,	xmm9
-
-	pslld	xmm7,	1			; сдвиг влево на 1 бит 
-	
-	sub		r10,	1			; уменьшаю счетчик цикла на 1
+	sub		rsi,	1			; уменьшаю счетчик цикла на 1
 	jg		l1					; повторить, если счетчик больше 0
-	
-	ret							; результат на xmm2, xmm3
+
+	ret							; результат на r12, r13, r14, r15
 
 Mul_32 ENDP
 
@@ -144,35 +222,78 @@ Mul_32 ENDP
 ; -------------------------------------------------------------------------------------	;
 CalculateSyndromes PROC	; [RCX] - D
 						; RDX   - N
-	mov rax, rdx		; rax <- N (счетчик цикла)
-	pxor xmm0, xmm0		; обнуляю xmm0
-	pxor xmm1, xmm1		; обнуляю xmm1
-	pxor xmm2, xmm2		; обнуляю xmm2
-	pxor xmm3, xmm3		; обнуляю xmm3
-	xor r8, r8			; обнуляю r8
+						; портит r8, r9, r10, r11, rax
 
-l1: 
-	call MulX_32
+	push	rsi							; хотим работать со всеми (почти) регистрами
+	push	r12
+	push	r13
+	push	r14
+	push	r15
 
-	; считаю синдром P 
-	pxor xmm0, [rcx + r8]			; прибавляю первые 128 бит блока
-	pxor xmm1, [rcx + r8 + 16]		; последние 128 бит
-	; считаю синдром Q
-	pxor xmm2, [rcx + r8]			; прибавляю первые 128 бит блока
-	pxor xmm3, [rcx + r8 + 16]		; последние 128 бит
-
-	add r8, 20h						; добавляю 32 (т.к. блоки по 32 байта) к регистру сдвига
-	sub rax, 1						; уменьшаю счетчик цикла на 1
-	jg l1							; повторить, если счетчик больше 0
-
-	; пишу синдром P на N-ое место
-	movdqa [rcx + r8], xmm0			; записываю первые 128 бит N-ного блока
-	movdqa [rcx + r8 + 16], xmm1	; вторые 128
+	mov		rsi,	rdx					; rsi <- N (счетчик цикла)
 	
-	add r8, 20h						; перехожу к N + 1 месту
-	; пишу синдром Q
-	movdqa [rcx + r8], xmm2			; записываю первые 128 бит N + 1 блока
-	movdqa [rcx + r8 + 16], xmm3	; вторые 128
+										; регистры для вычисления синдрома P
+	xor		r8,		r8
+	xor		r9,		r9
+	xor		r10,	r10
+	xor		r11,	r11
+										; регистры для вычисления синдрома Q
+	xor		r12,	r12
+	xor		r13,	r13
+	xor		r14,	r14
+	xor		r15,	r15
+
+	xor		rax,	rax
+l1: 
+	push	r8							; подготовка регистров для вызова процедуры умножения на x
+	push	r9
+	push	r10
+	push	r11
+	push	rax
+	call MulX_32
+	pop		rax
+	pop		r11
+	pop		r10
+	pop		r9
+	pop		r8
+
+										; считаю синдром P
+	xor		r8,		[rcx + rax]			; прибавляю первые 64 бита блока
+	xor		r9,		[rcx + rax + 8]		; еще 64
+	xor		r10,	[rcx + rax + 16]	; и еще 64
+	xor		r11,	[rcx + rax + 24]	; последние 64
+
+										; считаю синдром Q
+	xor		r12,	[rcx + rax]			; прибавляю первые 64 бита блока
+	xor		r13,	[rcx + rax + 8]		; еще 64
+	xor		r14,	[rcx + rax + 16]	; и еще 64
+	xor		r15,	[rcx + rax + 24]	; последние 64
+
+	add		rax,	20h					; добавляю 32 (т.к. блоки по 32 байта) к регистру сдвига
+	sub		rsi,	1					; уменьшаю счетчик цикла на 1
+	jg l1								; повторить, если счетчик больше 0
+
+										; пишу синдром P на N-ое место	
+	mov		[rcx + rax],		r8
+	mov		[rcx + rax + 8],	r9
+	mov		[rcx + rax + 16],	r10
+	mov		[rcx + rax + 24],	r11
+
+	add		rax,	20h						; перехожу к N + 1 месту
+
+											; пишу синдром Q
+	mov		[rcx + rax],		r12
+	mov		[rcx + rax + 8],	r13
+	mov		[rcx + rax + 16],	r14
+	mov		[rcx + rax + 24],	r15
+
+
+											; возвращаем на место
+	pop		r15								
+	pop		r14
+	pop		r13
+	pop		r12
+	pop		rsi								
 
 	ret
 CalculateSyndromes ENDP
@@ -185,98 +306,171 @@ Recover PROC	; [RCX] - D
 				; RDX   - N
 				; R8	- a
 				; R9	- b
+	push	rdi
+	push	rsi
+	push	rbx
+	push	r12
+	push	r13
+	push	r14
+	push	r15
 
 	mov		rax,	20h					; считаю на rax сдвиг N-ого блока
 	push	rdx							; здесь и дальше при умножении будем класть rdx на стек, т.к. mul его обнуляет.
 	mul		rdx
 	pop		rdx
-
-	movdqa	xmm10,	[rcx + rax]			; xmm10 <- первые 128 бит синдрома P
-	movdqa	xmm11,	[rcx + rax + 16]	; xmm11 <- последние 128 бит
-
-	movdqa	xmm12,	[rcx + rax + 32]	; xmm12 <- первые 128 бит синдома Q
-	movdqa	xmm13,	[rcx + rax + 48]	; xmm13 <- последние 128 бит
+										; записываю на регистры синдром P
+	mov		rdi,	[rcx + rax]		
+	mov		rsi,	[rcx + rax + 8]	
+	mov		r10,	[rcx + rax + 16]
+	mov		r11,	[rcx + rax + 24]
+	
+										; записываю на регистры синдром Q
+	mov		r12,	[rcx + rax + 32]			
+	mov		r13,	[rcx + rax + 40]		
+	mov		r14,	[rcx + rax + 48]	
+	mov		r15,	[rcx + rax + 56]	
 
 	push	r8
+	push	r9
+	push	r10
+	push	r11
 	push	rax
-	push	r9
-	call	CalculateSyndromes			; считаю синдромы без утраченных блоков
-	pop		r9
+	call	CalculateSyndromes			; считает синдромы без утраченных блоков
 	pop		rax
-	pop		r8
-										; прибавляю к исодным синдромам синдромы без утраченных блоков
-	pxor	xmm10,	[rcx + rax]			; xmm10 <- P c чертой, первые 128 бит
-	pxor	xmm11,	[rcx + rax + 16]	; xmm11 <- последние 128 бит
-
-	pxor	xmm12,	[rcx + rax + 32]	; xmm12 <- Q c чертой, первые 128 бит
-	pxor	xmm13,	[rcx + rax + 48]	; xmm13 <- последние 128 бит
-
-										; r11 <- индекс в таблице ReverseX, считаю как (a + 30 - N) так построена таблица. 
-	mov		r11,	r8					; r11 <- a
-	add		r11,	1Eh					: r11 <- a + 30
-	sub		r11,	rdx					; r11 <- a + 30 - N
-
-										; rax <- смещение в таблице ReverseX, r11 * 16 (scale = 16)
-	mov		rax,	10h					; rax <- 16
-	push	rdx
-	mul		r11							; rax <- 16 * r11
-	pop		rdx
-
-										; подготавливаю регистры xmm0, xmm1, xmm7 для вызова процедуры Mul_32
-	movdqa	xmm0,	xmm12				; xmm0 <- Q c чертой, первые 128 бит
-	movdqa	xmm1,	xmm13				; xmm1 <- последние 128 бит
-	push	r9
-	mov		r9,		offset ReverseX		; r9 <- адрес таблицы ReverseX
-	movdqa	xmm7,	[r9 + rax]			; xmm7 <- табличное значение по индексу (a + 30 - N)
-	call	Mul_32						; вызов Mul_32, результат на xmm2, xmm3
+	pop		r11
+	pop		r10
 	pop		r9
+	pop		r8
+										; прибавляю к исходным синдромам синдромы без утраченных блоков
+	xor		rdi,	[rcx + rax]		
+	xor		rsi,	[rcx + rax + 8]	
+	xor		r10,	[rcx + rax + 16]
+	xor		r11,	[rcx + rax + 24]
 
-	movdqa	xmm0,	xmm10				; xmm0 <- P c чертой, первые 128 бит
-	movdqa	xmm1,	xmm11				; xmm1 <- последние 128 бит
-										; прибавляю к P с чертой результат вызова процедуры Mul_32
-	pxor	xmm0,	xmm2				; xmm0 <- P с чертой - Q с чертой * x^(a - N + 1), первые 128 бит
-	pxor	xmm1,	xmm3				; xmm1 <- последние 128 бит
+	xor		r12,	[rcx + rax + 32]	
+	xor		r13,	[rcx + rax + 40]	
+	xor		r14,	[rcx + rax + 48]	
+	xor		r15,	[rcx + rax + 56]	
+											; возвращаю исходные синдромы
+	xor		[rcx + rax],		rdi	
+	xor		[rcx + rax + 8],	rsi	
+	xor		[rcx + rax + 16],	r10	
+	xor		[rcx + rax + 24],	r11	
+
+	xor		[rcx + rax + 32],	r12		
+	xor		[rcx + rax + 40],	r13		
+	xor		[rcx + rax + 48],	r14		
+	xor		[rcx + rax + 56],	r15		
+
+										; rbx <- индекс в таблице ReverseX, считаю как (a + 30 - N) так построена таблица. 
+	mov		rbx,	r8					; rbx <- a
+	add		rbx,	30					; rbx <- a + 30
+	sub		rbx,	rdx					; rbx <- a + 30 - N
+
+										; rax <- смещение в таблице ReverseX, rbx * 16 (scale = 16)
+	mov		rax,	16					; rax <- 16
+	push	rdx
+	mul		rbx							; rax <- 16 * rbx
+
+										; подготавливаю регистры для вызова процедуры Mul_32
+	push	r8
+	push	r9
+	push	r10
+	push	r11
+	push	rsi
+	push	rdi
+	push	rcx
+	mov		rbx,	offset ReverseX		; rbx <- адрес таблицы ReverseX
+	mov		rax,	[rbx + rax]			; rax <- табличное значение по индексу (a + 30 - N)
+	mov		r8,		r12					; r8, r9, r10, r11 <- Q c чертой
+	mov		r9,		r13
+	mov		r10,	r14
+	mov		r11,	r15
+	call	Mul_32						; вызов Mul_32, результат на r12, r13, r14, r15
+	pop		rcx
+	pop		rdi
+	pop		rsi
+	pop		r11
+	pop		r10
+	pop		r9
+	pop		r8
+	pop		rdx
+										; прибавляю P с чертой к результату вызова процедуры Mul_32
+										; P с чертой - Q с чертой * x^(a - N + 1)
+	xor		r12,	rdi
+	xor		r13,	rsi
+	xor		r14,	r10
+	xor		r15,	r11
 
 										; r11 <- индекс в таблице ReverseXAB, считаю как (a + 29 - b) так построена таблица. 
-	mov		r11,	r8					; r11 <- a
-	add		r11,	1Dh					; r11 <- a + 29
-	sub		r11,	r9					; r11 <- a + 29 - b
+	mov		rbx,	r8					; r11 <- a
+	add		rbx,	29					; r11 <- a + 29
+	sub		rbx,	r9					; r11 <- a + 29 - b
 
-										; rax <- смещение в таблице ReverseXAB, r11 * 16 (scale = 16)
-	mov		rax,	10h					; rax <- 16
+										; rax <- смещение в таблице ReverseXAB, rbx * 16 (scale = 16)
+	mov		rax,	16					; rax <- 16
 	push	rdx
-	mul		r11							; rax <- 16 * r11
-	pop		rdx
+	mul		rbx							; rax <- 16 * rbx
 
+										; подготавливаю регистры для вызова процедуры Mul_32
+	push	r8
 	push	r9
-	mov		r9,		offset ReverseXAB	; r9 <- адрес таблицы ReverseXAB
-	movdqa	xmm7,	[r9 + rax]			; xmm7 <- табличное значение по индексу (a + 29 - b)
-	call	Mul_32						; вызов Mul_32, результат на xmm2, xmm3
+	push	r10
+	push	r11
+	push	rsi
+	push	rdi
+	push	rcx
+	mov		rbx,	offset ReverseXAB	; rbx <- адрес таблицы ReverseXAB
+	mov		rax,	[rbx + rax]			; rax <- табличное значение по индексу (a + 29 - b)
+	mov		r8,		r12					; r8, r9, r10, r11 <- P с чертой - Q с чертой * x^(a - N + 1)
+	mov		r9,		r13
+	mov		r10,	r14
+	mov		r11,	r15
+	call	Mul_32						; вызов Mul_32, результат на r12, r13, r14, r15
+	pop		rcx
+	pop		rdi
+	pop		rsi
+	pop		r11
+	pop		r10
 	pop		r9
-
+	pop		r8
+	pop		rdx
 										; подсчет смещения для блока b
-	mov		rax,	20h					; rax <- 32
+	mov		rax,	32					; rax <- 32
 	push	rdx							
 	mul		r9							; rax <- 32 * b
 	pop		rdx
 
-										; запись xmm2, xmm3 (Db) на место блока b
-	movdqa	[rcx + rax],		xmm2	
-	movdqa	[rcx + rax + 16],	xmm3
+										; запись Db на место блока b
+	mov		[rcx + rax],		r12
+	mov		[rcx + rax + 8],	r13
+	mov		[rcx + rax + 16],	r14
+	mov		[rcx + rax + 24],	r15
 
-										; вычисление Da на xmm2, xmm3 (Da = P с чертой - Db)
-	pxor	xmm2,	xmm10				; xmm2 <- p с чертой + Db, первые 128 бит
-	pxor	xmm3,	xmm11				; xmm3 <- последние 128 бит
-
+										; вычисление Da (Da = P с чертой - Db)
+	xor		r12,	rdi
+	xor		r13,	rsi
+	xor		r14,	r10
+	xor		r15,	r11
 										; подсчет смещения для блока a
 	mov		rax,	20h					; rax <- 32
 	push	rdx
 	mul		r8							; rax <- 32 * a
 	pop		rdx
+										; запись Da на место блока a
+	mov		[rcx + rax],		r12
+	mov		[rcx + rax + 8],	r13
+	mov		[rcx + rax + 16],	r14
+	mov		[rcx + rax + 24],	r15
 
-										; запись xmm2, xmm3 (Da) на место блока a 
-	movdqa	[rcx + rax],		xmm2
-	movdqa	[rcx + rax + 16],	xmm3
+
+	pop		r15								
+	pop		r14
+	pop		r13
+	pop		r12
+	pop		rbx
+	pop		rsi
+	pop		rdi
 
 	ret
 Recover ENDP
