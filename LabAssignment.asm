@@ -22,66 +22,66 @@ ModuleMask	QWORD	0000008D0000008Dh
 HighBitMask QWORD	8000000080000000h
 ShiftMask	QWORD	0FFFFFFFEFFFFFFFFh
 ; будет удобней и, возможно, быстрее выписать x^(a - N + 1) в таблицу. 
-ReverseX	DWORD	0F7253097h, 0F7253097h, 0F7253097h, 0F7253097h		; x^-29
-			DWORD	0EE4A61A3h, 0EE4A61A3h, 0EE4A61A3h, 0EE4A61A3h		; x^-28
-			DWORD	0DC94C3CBh, 0DC94C3CBh, 0DC94C3CBh, 0DC94C3CBh		; x^-27
-			DWORD	0B929871Bh, 0B929871Bh, 0B929871Bh, 0B929871Bh		; x^-26
-			DWORD	072530EBBh, 072530EBBh, 072530EBBh, 072530EBBh		; x^-25
-			DWORD	0E4A61D76h, 0E4A61D76h, 0E4A61D76h, 0E4A61D76h		; x^-24
-			DWORD	0C94C3A61h, 0C94C3A61h, 0C94C3A61h, 0C94C3A61h		; x^-23
-			DWORD	09298744Fh, 09298744Fh, 09298744Fh, 09298744Fh		; x^-22
-			DWORD	02530E813h, 02530E813h, 02530E813h, 02530E813h		; x^-21
-			DWORD	04A61D026h, 04A61D026h, 04A61D026h, 04A61D026h		; x^-20
-			DWORD	094C3A04Ch, 094C3A04Ch, 094C3A04Ch, 094C3A04Ch		; x^-19
-			DWORD	029874015h, 029874015h, 029874015h, 029874015h		; x^-18
-			DWORD	0530E802Ah, 0530E802Ah, 0530E802Ah, 0530E802Ah		; x^-17
-			DWORD	0A61D0054h, 0A61D0054h, 0A61D0054h, 0A61D0054h		; x^-16
-			DWORD	04C3A0025h, 04C3A0025h, 04C3A0025h, 04C3A0025h		; x^-15
-			DWORD	09874004Ah, 09874004Ah, 09874004Ah, 09874004Ah		; x^-14
-			DWORD	030E80019h, 030E80019h, 030E80019h, 030E80019h		; x^-13
-			DWORD	061D00032h, 061D00032h, 061D00032h, 061D00032h		; x^-12
-			DWORD	0C3A00064h, 0C3A00064h, 0C3A00064h, 0C3A00064h		; x^-11
-			DWORD	087400045h, 087400045h, 087400045h, 087400045h		; x^-10
-			DWORD	0E800007h, 0E800007h, 0E800007h, 0E800007h			; x^-9
-			DWORD	01D00000Eh, 01D00000Eh, 01D00000Eh, 01D00000Eh		; x^-8
-			DWORD	03A00001Ch, 03A00001Ch, 03A00001Ch, 03A00001Ch		; x^-7
-			DWORD	074000038h, 074000038h, 074000038h, 074000038h		; x^-6
-			DWORD	0E8000070h, 0E8000070h, 0E8000070h, 0E8000070h		; x^-5
-			DWORD	0D000006Dh, 0D000006Dh, 0D000006Dh, 0D000006Dh		; x^-4
-			DWORD	0A0000057h, 0A0000057h, 0A0000057h, 0A0000057h		; x^-3
-			DWORD	040000023h, 040000023h, 040000023h, 040000023h		; x^-2
-			DWORD	080000046h, 080000046h, 080000046h, 080000046h		; x^-1
-			DWORD	01h, 01h, 01h, 01h									; x^0
+ReverseX	QWORD	0F7253097F7253097h			; x^-29
+			QWORD	0EE4A61A3EE4A61A3h			; x^-28
+			QWORD	0DC94C3CBDC94C3CBh			; x^-27
+			QWORD	0B929871BB929871Bh			; x^-26
+			QWORD	072530EBB72530EBBh			; x^-25
+			QWORD	0E4A61D76E4A61D76h			; x^-24
+			QWORD	0C94C3A61C94C3A61h			; x^-23
+			QWORD	09298744F9298744Fh			; x^-22
+			QWORD	02530E8132530E813h			; x^-21
+			QWORD	04A61D0264A61D026h			; x^-20
+			QWORD	094C3A04C94C3A04Ch			; x^-19
+			QWORD	02987401529874015h			; x^-18
+			QWORD	0530E802A530E802Ah			; x^-17
+			QWORD	0A61D0054A61D0054h			; x^-16
+			QWORD	04C3A00254C3A0025h			; x^-15
+			QWORD	09874004A9874004Ah			; x^-14
+			QWORD	030E8001930E80019h			; x^-13
+			QWORD	061D0003261D00032h			; x^-12
+			QWORD	0C3A00064C3A00064h			; x^-11
+			QWORD	08740004587400045h			; x^-10
+			QWORD	0E8000070E800007h			; x^-9
+			QWORD	01D00000E1D00000Eh			; x^-8
+			QWORD	03A00001C3A00001Ch			; x^-7
+			QWORD	07400003874000038h			; x^-6
+			QWORD	0E8000070E8000070h			; x^-5
+			QWORD	0D000006DD000006Dh			; x^-4
+			QWORD	0A0000057A0000057h			; x^-3
+			QWORD	04000002340000023h			; x^-2
+			QWORD	08000004680000046h			; x^-1
+			QWORD	00000000100000001h			; x^0
 ; а также 1 / (1 - x^(a - b))
-ReverseXAB	DWORD	0C5A67F60h, 0C5A67F60h, 0C5A67F60h, 0C5A67F60h		; 1 / (1 - x^-29)
-			DWORD	0EB53671Eh, 0EB53671Eh, 0EB53671Eh, 0EB53671Eh		; 1 / (1 - x^-28)
-			DWORD	075459857h, 075459857h, 075459857h, 075459857h		; 1 / (1 - x^-27)
-			DWORD	0C69FD7D6h, 0C69FD7D6h, 0C69FD7D6h, 0C69FD7D6h		; 1 / (1 - x^-26)
-			DWORD	074E9D383h, 074E9D383h, 074E9D383h, 074E9D383h		; 1 / (1 - x^-25)
-			DWORD	031AC5529h, 031AC5529h, 031AC5529h, 031AC5529h		; 1 / (1 - x^-24)
-			DWORD	0B5864737h, 0B5864737h, 0B5864737h, 0B5864737h		; 1 / (1 - x^-23)
-			DWORD	06E2C718Ch, 06E2C718Ch, 06E2C718Ch, 06E2C718Ch		; 1 / (1 - x^-22)
-			DWORD	09935D482h, 09935D482h, 09935D482h, 09935D482h		; 1 / (1 - x^-21)
-			DWORD	0F3C40F40h, 0F3C40F40h, 0F3C40F40h, 0F3C40F40h		; 1 / (1 - x^-20)
-			DWORD	05B426B47h, 05B426B47h, 05B426B47h, 05B426B47h		; 1 / (1 - x^-19)
-			DWORD	0B017EC5Bh, 0B017EC5Bh, 0B017EC5Bh, 0B017EC5Bh		; 1 / (1 - x^-18)
-			DWORD	07F4FBF9Bh, 07F4FBF9Bh, 07F4FBF9Bh, 07F4FBF9Bh		; 1 / (1 - x^-17)
-			DWORD	0E32BE35Fh, 0E32BE35Fh, 0E32BE35Fh, 0E32BE35Fh		; 1 / (1 - x^-16)
-			DWORD	02AFA55E1h, 02AFA55E1h, 02AFA55E1h, 02AFA55E1h		; 1 / (1 - x^-15)
-			DWORD	03288CA3Ah, 03288CA3Ah, 03288CA3Ah, 03288CA3Ah		; 1 / (1 - x^-14)
-			DWORD	03C69E351h, 03C69E351h, 03C69E351h, 03C69E351h		; 1 / (1 - x^-13)
-			DWORD	0F4FF4F8Bh, 0F4FF4F8Bh, 0F4FF4F8Bh, 0F4FF4F8Bh		; 1 / (1 - x^-12)
-			DWORD	0DA1B431h, 0DA1B431h, 0DA1B431h, 0DA1B431h			; 1 / (1 - x^-11)
-			DWORD	0E3F8FE4Bh, 0E3F8FE4Bh, 0E3F8FE4Bh, 0E3F8FE4Bh		; 1 / (1 - x^-10)
-			DWORD	09FCFE7BBh, 09FCFE7BBh, 09FCFE7BBh, 09FCFE7BBh		; 1 / (1 - x^-9)
-			DWORD	0C8C8C8A8h, 0C8C8C8A8h, 0C8C8C8A8h, 0C8C8C8A8h		; 1 / (1 - x^-8)
-			DWORD	076EDDB8Fh, 076EDDB8Fh, 076EDDB8Fh, 076EDDB8Fh		; 1 / (1 - x^-7)
-			DWORD	0CB2CB2AAh, 0CB2CB2AAh, 0CB2CB2AAh, 0CB2CB2AAh		; 1 / (1 - x^-6)
-			DWORD	09CE73987h, 09CE73987h, 09CE73987h, 09CE73987h		; 1 / (1 - x^-5)
-			DWORD	044444464h, 044444464h, 044444464h, 044444464h		; 1 / (1 - x^-4)
-			DWORD	0924924DCh, 0924924DCh, 0924924DCh, 0924924DCh		; 1 / (1 - x^-3)
-			DWORD	05555557Dh, 05555557Dh, 05555557Dh, 05555557Dh		; 1 / (1 - x^-2)
-			DWORD	0FFFFFF85h, 0FFFFFF85h, 0FFFFFF85h, 0FFFFFF85h		; 1 / (1 - x^-1)
+ReverseXAB	QWORD	0C5A67F60C5A67F60h			; 1 / (1 - x^-29)
+			QWORD	0EB53671EEB53671Eh			; 1 / (1 - x^-28)
+			QWORD	07545985775459857h			; 1 / (1 - x^-27)
+			QWORD	0C69FD7D6C69FD7D6h			; 1 / (1 - x^-26)
+			QWORD	074E9D38374E9D383h			; 1 / (1 - x^-25)
+			QWORD	031AC552931AC5529h			; 1 / (1 - x^-24)
+			QWORD	0B5864737B5864737h			; 1 / (1 - x^-23)
+			QWORD	06E2C718C6E2C718Ch			; 1 / (1 - x^-22)
+			QWORD	09935D4829935D482h			; 1 / (1 - x^-21)
+			QWORD	0F3C40F40F3C40F40h			; 1 / (1 - x^-20)
+			QWORD	05B426B475B426B47h			; 1 / (1 - x^-19)
+			QWORD	0B017EC5BB017EC5Bh			; 1 / (1 - x^-18)
+			QWORD	07F4FBF9B7F4FBF9Bh			; 1 / (1 - x^-17)
+			QWORD	0E32BE35FE32BE35Fh			; 1 / (1 - x^-16)
+			QWORD	02AFA55E12AFA55E1h			; 1 / (1 - x^-15)
+			QWORD	03288CA3A3288CA3Ah			; 1 / (1 - x^-14)
+			QWORD	03C69E3513C69E351h			; 1 / (1 - x^-13)
+			QWORD	0F4FF4F8BF4FF4F8Bh			; 1 / (1 - x^-12)
+			QWORD	0DA1B4310DA1B431h			; 1 / (1 - x^-11)
+			QWORD	0E3F8FE4BE3F8FE4Bh			; 1 / (1 - x^-10)
+			QWORD	09FCFE7BB9FCFE7BBh			; 1 / (1 - x^-9)
+			QWORD	0C8C8C8A8C8C8C8A8h			; 1 / (1 - x^-8)
+			QWORD	076EDDB8F76EDDB8Fh			; 1 / (1 - x^-7)
+			QWORD	0CB2CB2AACB2CB2AAh			; 1 / (1 - x^-6)
+			QWORD	09CE739879CE73987h			; 1 / (1 - x^-5)
+			QWORD	04444446444444464h			; 1 / (1 - x^-4)
+			QWORD	0924924DC924924DCh			; 1 / (1 - x^-3)
+			QWORD	05555557D5555557Dh			; 1 / (1 - x^-2)
+			QWORD	0FFFFFF85FFFFFF85h			; 1 / (1 - x^-1)
 .CODE
 
 MulX_32 PROC	; дл€ работы процедуры нужно подготовить регистры r12, r13, r14, r15 - 32 байтное множимое
@@ -306,6 +306,8 @@ Recover PROC	; [RCX] - D
 				; RDX   - N
 				; R8	- a
 				; R9	- b
+
+										; хочетс€ использовать как можно больше регистров
 	push	rdi
 	push	rsi
 	push	rbx
@@ -367,10 +369,9 @@ Recover PROC	; [RCX] - D
 	add		rbx,	30					; rbx <- a + 30
 	sub		rbx,	rdx					; rbx <- a + 30 - N
 
-										; rax <- смещение в таблице ReverseX, rbx * 16 (scale = 16)
-	mov		rax,	16					; rax <- 16
-	push	rdx
-	mul		rbx							; rax <- 16 * rbx
+										; rax <- смещение в таблице ReverseX, rbx * 8 (scale = 8)
+	mov		rax,	8					; rax <- 8
+	mul		rbx							; rax <- 8 * rbx
 
 										; подготавливаю регистры дл€ вызова процедуры Mul_32
 	push	r8
@@ -394,7 +395,6 @@ Recover PROC	; [RCX] - D
 	pop		r10
 	pop		r9
 	pop		r8
-	pop		rdx
 										; прибавл€ю P с чертой к результату вызова процедуры Mul_32
 										; P с чертой - Q с чертой * x^(a - N + 1)
 	xor		r12,	rdi
@@ -407,10 +407,9 @@ Recover PROC	; [RCX] - D
 	add		rbx,	29					; r11 <- a + 29
 	sub		rbx,	r9					; r11 <- a + 29 - b
 
-										; rax <- смещение в таблице ReverseXAB, rbx * 16 (scale = 16)
-	mov		rax,	16					; rax <- 16
-	push	rdx
-	mul		rbx							; rax <- 16 * rbx
+										; rax <- смещение в таблице ReverseXAB, rbx * 8 (scale = 8)
+	mov		rax,	8					; rax <- 8
+	mul		rbx							; rax <- 8 * rbx
 
 										; подготавливаю регистры дл€ вызова процедуры Mul_32
 	push	r8
@@ -434,12 +433,9 @@ Recover PROC	; [RCX] - D
 	pop		r10
 	pop		r9
 	pop		r8
-	pop		rdx
 										; подсчет смещени€ дл€ блока b
-	mov		rax,	32					; rax <- 32
-	push	rdx							
+	mov		rax,	32					; rax <- 32							
 	mul		r9							; rax <- 32 * b
-	pop		rdx
 
 										; запись Db на место блока b
 	mov		[rcx + rax],		r12
@@ -454,16 +450,14 @@ Recover PROC	; [RCX] - D
 	xor		r15,	r11
 										; подсчет смещени€ дл€ блока a
 	mov		rax,	20h					; rax <- 32
-	push	rdx
 	mul		r8							; rax <- 32 * a
-	pop		rdx
 										; запись Da на место блока a
 	mov		[rcx + rax],		r12
 	mov		[rcx + rax + 8],	r13
 	mov		[rcx + rax + 16],	r14
 	mov		[rcx + rax + 24],	r15
 
-
+										; возвращаю регистры на место
 	pop		r15								
 	pop		r14
 	pop		r13
